@@ -15,5 +15,14 @@ echo "
       Visit @TheUltroid for updates!!
 
 "
+
+if [ -z "$VIRTUAL_ENV" ]; then
+    if [ -f "venv/bin/activate" ]; then
+        source venv/bin/activate
+    elif [ -f "../venv/bin/activate" ]; then
+        source ../venv/bin/activate
+    fi
+fi
+
 if [ -f .env ] ; then  set -o allexport; source .env; set +o allexport ; fi
 if [ $SESSION1 ] ; then python3 multi_client.py ; else python3 -m pyUltroid ; fi
