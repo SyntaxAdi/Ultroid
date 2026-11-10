@@ -41,7 +41,11 @@ try:
 except ImportError:
     pass
 
-from telethon.errors import PeerIdInvalidError, YouBlockedUserError
+from telethon.errors import (
+    PeerIdInvalidError,
+    StickersetInvalidError,
+    YouBlockedUserError,
+)
 from telethon.tl.functions.messages import UploadMediaRequest
 from telethon.tl.types import (
     DocumentAttributeFilename,
@@ -54,7 +58,6 @@ from . import (
     KANGING_STR,
     LOGS,
     asst,
-    async_searcher,
     bash,
     con,
     functions,
@@ -235,13 +238,21 @@ async def hehe(args):
             file.name = "sticker.png"
             image.save(file, "PNG")
 
-        response = await async_searcher(f"http://t.me/addstickers/{packname}")
-        htmlstr = response.split("\n")
+        pack_exists = False
+        try:
+            await ultroid_bot(
+                functions.messages.GetStickerSetRequest(
+                    stickerset=types.InputStickerSetShortName(packname),
+                    hash=0,
+                )
+            )
+            pack_exists = True
+        except StickersetInvalidError:
+            pack_exists = False
+        except Exception as er:
+            LOGS.warning(f"Error checking sticker pack '{packname}': {er}")
 
-        if (
-            "  A <strong>Telegram</strong> user has created the <strong>Sticker&nbsp;Set</strong>."
-            not in htmlstr
-        ):
+        if pack_exists:
             async with ultroid_bot.conversation("@Stickers") as conv:
                 try:
                     await conv.send_message("/addsticker")
@@ -327,8 +338,13 @@ async def hehe(args):
                 await ultroid_bot.send_read_acknowledge(conv.chat_id)
         else:
             await xx.edit("`Brewing a new Pack...`")
-            async with ultroid_bot.conversation("Stickers") as conv:
-                await conv.send_message(cmd)
+            async with ultroid_bot.conversation("@Stickers") as conv:
+                try:
+                    await conv.send_message(cmd)
+                except YouBlockedUserError:
+                    LOGS.info("Unblocking @Stickers for kang...")
+                    await ultroid_bot(functions.contacts.UnblockRequest("stickers"))
+                    await conv.send_message(cmd)
                 await conv.get_response()
                 await conv.send_message(packnick)
                 await conv.get_response()
