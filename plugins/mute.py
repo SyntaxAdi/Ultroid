@@ -55,7 +55,11 @@ async def startmute(event):
             return await xx.edit(str(x))
     elif event.reply_to_msg_id:
         reply = await event.get_reply_message()
+        if not reply:
+            return await xx.eor("`Replied message not found.`", time=5)
         userid = reply.sender_id
+        if not userid:
+            return await xx.eor("`Cannot get sender of replied message.`", time=5)
         if reply.out or userid in [ultroid_bot.me.id, asst.me.id]:
             return await xx.eor("`You cannot mute yourself or your assistant bot.`")
     elif event.is_private:
@@ -85,7 +89,12 @@ async def endmute(event):
         except Exception as x:
             return await xx.edit(str(x))
     elif event.reply_to_msg_id:
-        userid = (await event.get_reply_message()).sender_id
+        reply = await event.get_reply_message()
+        if not reply:
+            return await xx.eor("`Replied message not found.`", time=5)
+        userid = reply.sender_id
+        if not userid:
+            return await xx.eor("`Cannot get sender of replied message.`", time=5)
     elif event.is_private:
         userid = event.chat_id
     else:
@@ -115,11 +124,22 @@ async def _(e):
     chat = await e.get_chat()
     if e.reply_to_msg_id:
         reply = await e.get_reply_message()
+        if not reply:
+            return await xx.eor("`Replied message not found.`", time=5)
         userid = reply.sender_id
-        name = (await reply.get_sender()).first_name
+        if not userid:
+            return await xx.eor("`Cannot get sender of replied message.`", time=5)
+        try:
+            sender = await reply.get_sender() or await e.client.get_entity(userid)
+            name = inline_mention(sender)
+        except Exception:
+            name = f"`{userid}`"
     elif input_:
-        userid = await e.client.parse_id(input_)
-        name = (await e.client.get_entity(userid)).first_name
+        try:
+            userid = await e.client.parse_id(input_)
+            name = inline_mention(await e.client.get_entity(userid))
+        except Exception as x:
+            return await xx.edit(str(x))
     else:
         return await xx.eor(get_string("tban_1"), time=3)
     if userid == ultroid_bot.uid:
@@ -134,7 +154,7 @@ async def _(e):
         )
         await eod(
             xx,
-            f"`Successfully Muted` [{name}](tg://user?id={userid}) `in {chat.title} for {tme}`",
+            f"`Successfully Muted` {name} `in {chat.title} for {tme}`",
             time=5,
         )
     except BaseException as m:
@@ -152,11 +172,22 @@ async def _(e):
     chat = await e.get_chat()
     if e.reply_to_msg_id:
         reply = await e.get_reply_message()
+        if not reply:
+            return await xx.eor("`Replied message not found.`", time=5)
         userid = reply.sender_id
-        name = (await reply.get_sender()).first_name
+        if not userid:
+            return await xx.eor("`Cannot get sender of replied message.`", time=5)
+        try:
+            sender = await reply.get_sender() or await e.client.get_entity(userid)
+            name = inline_mention(sender)
+        except Exception:
+            name = f"`{userid}`"
     elif input:
-        userid = await e.client.parse_id(input)
-        name = (await e.client.get_entity(userid)).first_name
+        try:
+            userid = await e.client.parse_id(input)
+            name = inline_mention(await e.client.get_entity(userid))
+        except Exception as x:
+            return await xx.edit(str(x))
     else:
         return await xx.eor(get_string("tban_1"), time=3)
     try:
@@ -168,7 +199,7 @@ async def _(e):
         )
         await eod(
             xx,
-            f"`Successfully Unmuted` [{name}](tg://user?id={userid}) `in {chat.title}`",
+            f"`Successfully Unmuted` {name} `in {chat.title}`",
             time=5,
         )
     except BaseException as m:
@@ -182,29 +213,60 @@ async def _(e):
     xx = await e.eor("`Muting...`")
     input = e.pattern_match.group(1).strip()
     chat = await e.get_chat()
+    userid = None
+    name = None
+    until_date = None
+    time_str = None
+
     if e.reply_to_msg_id:
-        userid = (await e.get_reply_message()).sender_id
-        name = get_display_name(await e.client.get_entity(userid))
-    elif input:
+        reply = await e.get_reply_message()
+        if not reply:
+            return await xx.eor("`Replied message not found.`", time=5)
+        userid = reply.sender_id
+        if not userid:
+            return await xx.eor("`Cannot get sender of replied message.`", time=5)
         try:
-            userid = await e.client.parse_id(input)
+            sender = await reply.get_sender() or await e.client.get_entity(userid)
+            name = inline_mention(sender)
+        except Exception:
+            name = f"`{userid}`"
+        if input:
+            try:
+                until_date = ban_time(input)
+                time_str = input
+            except Exception:
+                pass
+    elif input:
+        parts = input.split(maxsplit=1)
+        try:
+            userid = await e.client.parse_id(parts[0])
             name = inline_mention(await e.client.get_entity(userid))
         except Exception as x:
             return await xx.edit(str(x))
+        if len(parts) > 1:
+            try:
+                until_date = ban_time(parts[1])
+                time_str = parts[1]
+            except Exception:
+                pass
     else:
         return await xx.eor(get_string("tban_1"), time=3)
+
     if userid == ultroid_bot.uid:
         return await xx.eor("`I can't mute myself.`", time=3)
     try:
         await e.client.edit_permissions(
             chat.id,
             userid,
-            until_date=None,
+            until_date=until_date,
             send_messages=False,
         )
+        msg_text = f"`Successfully Muted` {name} `in {chat.title}`"
+        if time_str:
+            msg_text += f" `for {time_str}`"
         await eod(
             xx,
-            f"`Successfully Muted` {name} `in {chat.title}`",
+            msg_text,
         )
     except BaseException as m:
         await xx.eor(f"`{m}`", time=5)
