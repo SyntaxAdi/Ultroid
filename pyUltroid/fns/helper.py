@@ -87,6 +87,12 @@ def make_mention(user, custom=None):
 def inline_mention(user, custom=None, html=False):
     mention_text = get_display_name(user) or "Deleted Account" if not custom else custom
     if isinstance(user, types.User):
+        if getattr(user, "bot", False):
+            if user.username:
+                if html:
+                    return f"<a href=https://t.me/{user.username}>{mention_text}</a>"
+                return f"[{mention_text}](https://t.me/{user.username})"
+            return mention_text
         if html:
             return f"<a href=tg://user?id={user.id}>{mention_text}</a>"
         return f"[{mention_text}](tg://user?id={user.id})"

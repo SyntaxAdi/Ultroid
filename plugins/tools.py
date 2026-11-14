@@ -155,7 +155,16 @@ async def _(ult):
                 mentions += f"\n• {inline_mention(x)} `{x.id}`"
     except Exception as e:
         mentions += f" {str(e)}" + "\n"
-    await ult.eor(mentions)
+    try:
+        await ult.eor(mentions)
+    except MessageTooLongError:
+        with io.BytesIO(str.encode(mentions)) as out_file:
+            out_file.name = "bots.txt"
+            await ult.reply(f"`{ult.text}`", file=out_file)
+        try:
+            await ult.delete()
+        except Exception:
+            pass
 
 
 @ultroid_cmd(

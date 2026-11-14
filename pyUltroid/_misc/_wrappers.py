@@ -33,6 +33,14 @@ async def eor(event, text=None, time=None, link_preview=False, edit_time=None, *
                 ok = await event.edit(text, link_preview=link_preview, **args)
             except MessageNotModifiedError:
                 ok = event
+            except Exception:
+                ok = await event.client.send_message(
+                    event.chat_id,
+                    text,
+                    link_preview=link_preview,
+                    reply_to=reply_to,
+                    **args
+                )
     else:
         ok = await event.client.send_message(
             event.chat_id, text, link_preview=link_preview, reply_to=reply_to, **args
